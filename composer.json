@@ -1,0 +1,23 @@
+{
+	"name": "questwork/dbo",
+	"description": "Databse Object Wrapper for PHP",
+	"keywords": ["questwork", "dbo"],
+	"type": "library",
+	"homepage": "https://github.com/tiepnguyen/dbo",
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Tiep Nguyen",
+			"email": "tiep@tiep.info",
+			"homepage": "https://tiep.info"
+		}
+	],
+	"require": {
+		"php": ">=5.4.0"
+	},
+	"autoload": {
+		"psr-4": {
+			"Questwork\\": "src/Questwork/"
+		}
+	}
+}
