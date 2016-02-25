@@ -138,24 +138,35 @@ class Database
             if (!is_array($where)) {
                 $where = [$where];
             }
-            $condition = [];
+            $conditions = [];
             $result = [];
             foreach ($where as $key => $value) {
                 if (is_string($key)) {
                     $newKey = str_replace('.', '_', $key);
                     $hasSpace = ($spacePos = strpos($key, ' ')) !== FALSE;
                     if (!$hasSpace) {
-                        array_push($result, "$key = :$newKey");
+                        $condition = "$key = :$newKey";
                     } else {
                         $newKey = substr($newKey, 0, $spacePos);
-                        array_push($result, "$key :$newKey");
+                        $condition = "$key :$newKey";
                     }
-                    $condition[$newKey] = $value;
+                    if (is_array($value)) {
+                        $condition = [];
+                        foreach ($value as $subkey => $subvalue) {
+                            $subkey = $newKey . '_' . $subkey;
+                            array_push($condition, "$key = :$subkey");
+                            $conditions[$subkey] = $subvalue;
+                        }
+                        $condition = '(' . implode(' OR ', $condition) . ')';
+                    } else {
+                        $conditions[$newKey] = $value;
+                    }
+                    array_push($result, $condition);
                 } else {
                     array_push($result, $value);
                 }
             }
-            $where = $condition;
+            $where = $conditions;
             $result = "\nWHERE " . implode("\nAND ", $result);
         }
         return $result;
