@@ -73,6 +73,21 @@ class Database
         return $this->pdo->lastInsertId();
     }
 
+    public function transaction()
+    {
+        return $this->pdo->beginTransaction();
+    }
+
+    public function rollback()
+    {
+        return $this->pdo->rollback();
+    }
+
+    public function commit()
+    {
+        return $this->pdo->commit();
+    }
+
     public function pdo()
     {
         return $this->pdo;
@@ -101,12 +116,37 @@ class Database
 
         $command = "SELECT $fields";
         $command .= "\nFROM $from";
+
         if (isset($join)) {
-            foreach ($join as $key => $value) {
+            $inner_join = $join;
+        }
+        if (isset($inner_join)) {
+            foreach ($inner_join as $key => $value) {
                 $value = implode(" = ", preg_split('/\s*=\s*/', trim($value)));
-                $join[$key] = "JOIN $key ON $value";
+                $inner_join[$key] = "INNER JOIN $key ON $value";
             }
-            $command .= "\n" . implode("\n", $join);
+            $command .= "\n" . implode("\n", $inner_join);
+        }
+        if (isset($left_join)) {
+            foreach ($left_join as $key => $value) {
+                $value = implode(" = ", preg_split('/\s*=\s*/', trim($value)));
+                $left_join[$key] = "LEFT JOIN $key ON $value";
+            }
+            $command .= "\n" . implode("\n", $left_join);
+        }
+        if (isset($right_join)) {
+            foreach ($right_join as $key => $value) {
+                $value = implode(" = ", preg_split('/\s*=\s*/', trim($value)));
+                $right_join[$key] = "RIGHT JOIN $key ON $value";
+            }
+            $command .= "\n" . implode("\n", $right_join);
+        }
+        if (isset($outer_join)) {
+            foreach ($outer_join as $key => $value) {
+                $value = implode(" = ", preg_split('/\s*=\s*/', trim($value)));
+                $outer_join[$key] = "OUTER JOIN $key ON $value";
+            }
+            $command .= "\n" . implode("\n", $outer_join);
         }
         $command .= $this->parseCondition($where);
         if (isset($group_by)) {
