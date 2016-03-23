@@ -185,7 +185,7 @@ class Database
                     $newKey = str_replace('.', '_', $key);
                     $hasSpace = ($spacePos = strpos($key, ' ')) !== FALSE;
                     if (!$hasSpace) {
-                        $condition = "$key = :$newKey";
+                        $condition = "`$key` = :$newKey";
                     } else {
                         $newKey = substr($newKey, 0, $spacePos);
                         $condition = "$key :$newKey";
@@ -229,24 +229,53 @@ class Database
         return $result ? $result['count'] : '0';
     }
 
-    public function insert($table = '', $fields = [], $batch = NULL)
+    public function insert($table = '', $fields = [], $batch = NULL, $updateOnDuplicate = FALSE)
     {
         $command = "INSERT INTO $table ";
-        if ($batch) {
+        if (is_array($batch)) {
+            // $batchCopy = $batch;
             $keys = $fields;
+            $fields = [];
             foreach ($batch as $key => $value) {
                 if (is_string($value)) {
                     $value = preg_split('/[\ \,]+/', $value);
                 }
-                $batch[$key] = "('" . implode("', '", $value) . "')";
+                $batch[$key] = [];
+                \ChromePhp::log($value);
+                if (array_keys($value) !== range(0, count($value) - 1)) {
+                    // is assoc array
+                    for ($k = 0, $n = count($value); $k < $n; $k++) {
+                        array_push($batch[$key], ':' . $keys[$k] . $key);
+                        $fields[$keys[$k] . $key] = $value[$keys[$k]];
+                    }
+                } else {
+                    foreach ($value as $k => $j) {
+                        array_push($batch[$key], ':' . $keys[$k] . $key);
+                        $fields[$keys[$k] . $key] = $j;
+                    }
+                }
+                $batch[$key] = "(" . implode(", ", $batch[$key]) . ")";
             }
             $values = "\n" . implode(",\n", $batch);
-            $fields = [];
         } else {
             $keys = array_keys($fields);
             $values = "(:" . implode(", :", $keys) . ")";
         }
-        $command .= "(" . implode(", ", $keys) . ") \nVALUES $values";
+        $command .= "(`" . implode("`, `", $keys) . "`) \nVALUES $values";
+        if ($batch === TRUE || $updateOnDuplicate === TRUE) {
+            $command .= "\nON DUPLICATE KEY UPDATE\n";
+            $updates = [];
+            if (is_array($batch)) {
+                foreach ($keys as $key => $value) {
+                    array_push($updates, $value . ' = VALUES(' . $value . ')');
+                }
+            } else {
+                foreach ($fields as $key => $value) {
+                    array_push($updates, $key . ' = :' . $key);
+                }
+            }
+            $command .= implode(",\n", $updates);
+        }
         return $this->query($command, $fields)->rowCount();
     }
 
@@ -255,7 +284,7 @@ class Database
         $command = "UPDATE $table \nSET ";
         $params = array_merge($fields, $where);
         foreach ($fields as $key => $value) {
-            $fields[$key] = "$key = :$key";
+            $fields[$key] = "`$key` = :$key";
         }
         $command .= implode(', ', $fields) . $this->parseCondition($where);
         return $this->query($command, $params)->rowCount();
