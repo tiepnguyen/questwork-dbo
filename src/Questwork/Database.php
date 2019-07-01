@@ -18,7 +18,7 @@ class Database
             trigger_error($message = 'Missing database connect configuration');
             throw new Exception($message);
         } else if (is_string($config)) {
-            $config = ['connection' => 'sqlite:' . $config];
+            $config = ['connection' => $config];
         } else if (is_null($config['connection'])) {
             $config['connection'] = 'mysql:host=' . $config['hostname'] . ';dbname=' . $config['database'];
         }
